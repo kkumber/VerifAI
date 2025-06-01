@@ -30,6 +30,7 @@ async function verifyText(text) {
   }
 }
 
+// Inject Loading Popup into DOM
 function showLoadingPopup() {
   const iconUrl = chrome.runtime.getURL('images/loader.png');
   const html = `
@@ -45,8 +46,10 @@ function showLoadingPopup() {
     </div>
   `;
   updatePopup(html, "loading-state");
+  updateCloseButton('loading');
 }
 
+// Inject Error Popup into DOM
 function showErrorPopup(message) {
   const iconUrl = chrome.runtime.getURL('images/info.png');
   const html = `
@@ -58,8 +61,10 @@ function showErrorPopup(message) {
     </div>
   `;
   updatePopup(html, "error-state");
+  updateCloseButton('error');
 }
 
+// Inject Verdict into DOM
 function showVerdictPopup(verdict, explanation, links) {
   const verdictText = verdict.toString().toUpperCase();
   const linksHtml = links.map(link => `<li><a href="${link}" target="_blank">${link}</a></li>`).join('');
@@ -78,6 +83,7 @@ function showVerdictPopup(verdict, explanation, links) {
     </div>
   `;
   updatePopup(html, "verdict-state");
+  updateCloseButton(verdict ? 'true' : 'false');
 }
 
 let currentOverlay = null;
@@ -136,6 +142,7 @@ async function createOverlay(selectedText) {
     const textElement = shadow.querySelector('.highlighted-text-js');
     if (textElement) textElement.textContent = selectedText;
     
+    updateCloseButton('default');
     shadow.querySelector('.close-btn').addEventListener('click', () => {
       overlay.remove();
       currentOverlay = null;
@@ -164,4 +171,46 @@ function updatePopup(html, state) {
     popupCard.classList.add(state);
     popupElement.innerHTML = html;
   }
+}
+
+// Function to update close button image based on state
+function updateCloseButton(state) {
+  if (!currentOverlay) return;
+  
+  const closeBtn = currentOverlay.shadowRoot.querySelector('.close-btn');
+  if (!closeBtn) return;
+  
+  closeBtn.innerHTML = '';
+  
+  // Create image element
+  const img = document.createElement('img');
+  img.alt = 'Close';
+  img.className = 'close-btn-icon';
+  
+  // Set image source based on state
+  switch(state) {
+    case 'loading':
+      img.src = chrome.runtime.getURL('images/check-square-loading.png');
+      img.alt = 'Close (Loading)';
+      break;
+    case 'error':
+      img.src = chrome.runtime.getURL('images/check-square-error.png');
+      img.alt = 'Close (Error)';
+      break;
+    case 'true':
+      img.src = chrome.runtime.getURL('images/check-square-true.png'); 
+      img.alt = 'Close (Success)';
+      break;
+    case 'false':
+      img.src = chrome.runtime.getURL('images/check-square-false.png');
+      img.alt = 'Close (Failure)';
+      break;
+    default:
+      img.src = chrome.runtime.getURL('images/check-square-loading.png');
+      img.alt = 'Close';
+  }
+  
+  closeBtn.appendChild(img);
+  
+  closeBtn.className = `close-btn close-btn-${state}`;
 }
