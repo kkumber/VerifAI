@@ -57,10 +57,11 @@ function showVerdictPopup(verdict, explanation, links) {
   const linksHtml = links.map(link => `<li><a href="${link}" target="_blank">${link}</a></li>`).join('');
 
   const html = `
-    <div class="verdict-container">
-      <i>Verdict: <span class="verdict-result">${verdictText}</span></i>
+    <div class="verdict-container ${verdict ? "verdict-container-true" : "verdict-container-false"}">
+      <i><p>Verdict: </p>
+            <p class="verdict-result ${verdict ? "verdict-result-true" : "verdict-result-false"}">${verdictText}</p></i>
     <div class="explanation-container">
-      <textarea class="explanation-js" readonly>${explanation}</textarea>
+      <textarea class="explanation-js ${verdict ? "explanation-js-true" : "explanation-js-false"}" readonly>${explanation}</textarea>
     </div>
       </div>
     <div class="links-container">
@@ -138,6 +139,7 @@ async function createOverlay(selectedText) {
   }
 }
 
+// Helper function to update inner html
 function updatePopup(html) {
   if (!currentOverlay) return;
   

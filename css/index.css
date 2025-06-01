@@ -59,6 +59,7 @@
   --color-primary: #93e2f5;
   --color-text-default: #0b0b0b;
   --color-primary-false: #f59395;
+  --color-background-false: #e6bbbc;
   --color-verdict-true: #00c5f4;
   --color-verdict-false: #f40004;
   --color-background-links: #d9f2d8;
@@ -70,23 +71,24 @@
 }
 
 .popup-card {
+  width: 50vw;
+  height: 90vh;
   border: 1px solid black;
   font-family: var(--font-family-default);
   border-radius: 0.8rem;
   box-shadow: 8px 8px 0 rgba(0, 0, 0, 1);
   color: var(--color-text-default);
   background-color: var(--color-background);
-  overflow: hidden;
+  overflow: auto;
 }
 
-.popup-card textarea {
+.popup-card .explanation-js {
   width: 100%;
   height: 200px;
   resize: none;
   overflow: auto;
   padding: 0.8rem;
   border-radius: 1rem;
-  background-color: var(--color-primary);
   color: var(--color-text-default);
 }
 
@@ -96,13 +98,11 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background-color: var(--color-secondary-dark);
   padding: 1rem;
 }
 
 .popup-card .verdict-container .verdict-result {
   font-size: 2rem;
-  color: var(--color-verdict-true);
   text-shadow: -1px -1px 0 black, 3px -1px 0 black, -1px 1px 0 black,
     4px 1px 0 black;
 }
@@ -111,4 +111,28 @@
   padding: 1rem;
   border-top: 1px solid black;
   background-color: var(--color-background-links);
+}
+
+.popup-card .verdict-container-true {
+  background-color: var(--color-secondary-dark);
+}
+
+.popup-card .verdict-result-true {
+  color: var(--color-verdict-true);
+}
+
+.popup-card .explanation-js-true {
+  background-color: var(--color-primary);
+}
+
+.popup-card .verdict-container-false {
+  background-color: var(--color-background-false);
+}
+
+.popup-card .verdict-result-false {
+  color: var(--color-verdict-false);
+}
+
+.popup-card .explanation-js-false {
+  background-color: var(--color-primary-false);
 }

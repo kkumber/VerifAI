@@ -28,15 +28,20 @@
 
 
   <div class="popup-card">
-    <button class="close-btn">X</button>
     <header class="popup-header-container">
-      <h2>VerifAI</h2>
+      <div class="top-header">
+        <button class="close-btn">X</button>
+        <h2>VerifAI</h2>
+      </div>
       <a href="#">How we check information</a>
       <i>The highlighted text is "<span class="highlighted-text-js"></span>"</i>
     </header>
     <main class="popup-state-js">
       <div class="verdict-container">
-      <i>Verdict: <h2 class="verdict-result">${verdictText}</h2></i>
+          <i><p>Verdict: </p>
+            <p class="verdict-result">${verdictText}</p></i>
+
+        
     <div class="explanation-container">
       <textarea class="explanation-js" readonly>${explanation}</textarea>
     </div>
@@ -46,7 +51,6 @@
       <ul>${linksHtml}</ul>
     </div>
     </main>
-
   </div>
   
 
