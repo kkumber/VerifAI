@@ -3,6 +3,9 @@
 .popup-header-container {
   display: flex;
   flex-direction: column;
+  background-color: var(--color-header-background);
+  border-bottom: 1px black solid;
+  padding: 1rem;
 }
 
 .popup-header-container h2 {

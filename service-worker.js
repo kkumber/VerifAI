@@ -22,12 +22,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       
       // Inject content script if it's not loaded
       try {
+
+        await chrome.scripting.insertCSS({
+          target: { tabId: tab.id },
+          files: ["css/index.css", "css/header.css"]
+        });
+
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           files: ['scripts/content.js']
         });
-        
-        // Try sending message again after injection
+
+        // Try again after injection
         await chrome.tabs.sendMessage(tab.id, {
           action: "verifySelectedText",
           text: selectedText,

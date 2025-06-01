@@ -53,16 +53,16 @@ function showErrorPopup(message) {
 }
 
 function showVerdictPopup(verdict, explanation, links) {
-  const verdictText = verdict ? "Accurate" : "Questionable";
+  const verdictText = verdict.toString().toUpperCase();
   const linksHtml = links.map(link => `<li><a href="${link}" target="_blank">${link}</a></li>`).join('');
 
   const html = `
     <div class="verdict-container">
       <i>Verdict: <span class="verdict-result">${verdictText}</span></i>
-    </div>
     <div class="explanation-container">
       <textarea class="explanation-js" readonly>${explanation}</textarea>
     </div>
+      </div>
     <div class="links-container">
       <p>Supporting Articles:</p>
       <ul>${linksHtml}</ul>
@@ -73,29 +73,51 @@ function showVerdictPopup(verdict, explanation, links) {
 
 let currentOverlay = null;
 
+
 async function createOverlay(selectedText) {
-  // Remove existing overlay
   if (currentOverlay) {
     currentOverlay.remove();
     currentOverlay = null;
   }
   
   try {
-    const response = await fetch(chrome.runtime.getURL('popup/popup.html'));
-    const htmlContent = await response.text();
+    // Fetch HTML content
+    const htmlResponse = await fetch(chrome.runtime.getURL('popup/popup.html'));
+    let htmlContent = await htmlResponse.text();
     
+    // Create overlay container
     const overlay = document.createElement('div');
     overlay.id = 'verifaiOverlay';
-    overlay.style = `
-    position: fixed;
-    top: 20;
-    right: 20;
-    z-index: 1000;
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0%;
+      right: 20%;
+      z-index: 1000;
     `;
     
-    // Create SHADOW DOM for style isolation
+    // Create shadow DOM
     const shadow = overlay.attachShadow({ mode: 'open' });
-    shadow.innerHTML = htmlContent;
+    
+    const cssFiles = [
+      'css/index.css',
+      'css/header.css'
+    ];
+    
+    // Add CSS to shadow DOM
+    for (const cssFile of cssFiles) {
+      const cssUrl = chrome.runtime.getURL(cssFile);
+      const cssResponse = await fetch(cssUrl);
+      const cssText = await cssResponse.text();
+      
+      const style = document.createElement('style');
+      style.textContent = cssText;
+      shadow.appendChild(style);
+    }
+
+    // Add HTML content
+    const container = document.createElement('div');
+    container.innerHTML = htmlContent;
+    shadow.appendChild(container);
     
     // Set text and close handler
     const textElement = shadow.querySelector('.highlighted-text-js');

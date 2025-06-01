@@ -32,10 +32,19 @@
     <header class="popup-header-container">
       <h2>VerifAI</h2>
       <a href="#">How we check information</a>
-      <i>The highlighted text is <p class="highlighted-text-js"></p></i>
+      <i>The highlighted text is "<span class="highlighted-text-js"></span>"</i>
     </header>
     <main class="popup-state-js">
-      
+      <div class="verdict-container">
+      <i>Verdict: <h2 class="verdict-result">${verdictText}</h2></i>
+    <div class="explanation-container">
+      <textarea class="explanation-js" readonly>${explanation}</textarea>
+    </div>
+      </div>
+    <div class="links-container">
+      <p>Supporting Articles:</p>
+      <ul>${linksHtml}</ul>
+    </div>
     </main>
 
   </div>

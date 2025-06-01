@@ -25,7 +25,7 @@
   ],
     "web_accessible_resources": [
     {
-      "resources": ["fonts/Satoshi-Bold.otf", "fonts/Satoshi-BoldItalic.otf", "fonts/Satoshi-Italic.otf", "fonts/Satoshi-Regular.otf", "fonts/FiraMono-Bold.ttf", "fonts/FiraMono-Medium.ttf", "fonts/FiraMono-Regular.ttf", "popup/popup.html"],
+      "resources": ["fonts/*", "popup/*", "css/*", "images/*"],
       "matches": ["<all_urls>"]
     }
   ],
