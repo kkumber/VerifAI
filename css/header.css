@@ -1,0 +1,10 @@
+@import url("index.css");
+
+.popup-header-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header-container h2 {
+  font-family: var(--font-family-header);
+}
