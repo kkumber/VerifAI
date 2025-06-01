@@ -60,11 +60,10 @@
   box-sizing: border-box;
 }
 
-body {
-  font-family: var(--font-family-default);
-}
-
 .popup-card {
   border: 1px solid black;
   padding: 1rem;
+  font-family: var(--font-family-default);
+  border-radius: 0.8rem;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 1);
 }
