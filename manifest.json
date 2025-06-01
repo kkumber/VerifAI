@@ -19,7 +19,7 @@
     {
       "matches": ["<all_urls>"],
       "js": ["scripts/content.js"],
-      "css": ["css/index.css", "css/header.css"],
+      "css": ["css/index.css", "css/header.css", "css/verdict.css", "css/error.css", "css/loading.css"],
       "run_at": "document_idle"
     }
   ],

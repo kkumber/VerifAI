@@ -3,7 +3,7 @@
 .popup-header-container {
   display: flex;
   flex-direction: column;
-  background-color: var(--color-header-background);
+  background-color: var(--color-background);
   border-bottom: 1px black solid;
   padding: 1rem;
 }

@@ -31,25 +31,33 @@ async function verifyText(text) {
 }
 
 function showLoadingPopup() {
+  const iconUrl = chrome.runtime.getURL('images/loader.png');
   const html = `
     <div class="popup-loading-state">
-      <div class="loader"></div>
+      <div class="loader">
+        <div class="popup-loading-state">
+        <div class="loader-container">
+        <img src="${iconUrl}" alt="Loader"></div>
+        <i>Extracting information...</i>
+      </div>
+      </div>
       <i>Extracting information...</i>
     </div>
   `;
-  updatePopup(html);
+  updatePopup(html, "loading-state");
 }
 
 function showErrorPopup(message) {
+  const iconUrl = chrome.runtime.getURL('images/info.png');
   const html = `
     <div class="popup-invalid-state">
       <div class="warning-icon">
-        <img src="../images/info.png" alt="Error Icon">
+        <img src="${iconUrl}" alt="Error Icon">
       </div>
       <i><b>${message}</b></i>
     </div>
   `;
-  updatePopup(html);
+  updatePopup(html, "error-state");
 }
 
 function showVerdictPopup(verdict, explanation, links) {
@@ -69,7 +77,7 @@ function showVerdictPopup(verdict, explanation, links) {
       <ul>${linksHtml}</ul>
     </div>
   `;
-  updatePopup(html);
+  updatePopup(html, "verdict-state");
 }
 
 let currentOverlay = null;
@@ -91,8 +99,9 @@ async function createOverlay(selectedText) {
     overlay.id = 'verifaiOverlay';
     overlay.style.cssText = `
       position: fixed;
-      top: 0%;
-      right: 20%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       z-index: 1000;
     `;
     
@@ -101,7 +110,10 @@ async function createOverlay(selectedText) {
     
     const cssFiles = [
       'css/index.css',
-      'css/header.css'
+      'css/header.css',
+      'css/verdict.css',
+      'css/error.css',
+      'css/loading.css'
     ];
     
     // Add CSS to shadow DOM
@@ -140,11 +152,16 @@ async function createOverlay(selectedText) {
 }
 
 // Helper function to update inner html
-function updatePopup(html) {
+function updatePopup(html, state) {
   if (!currentOverlay) return;
   
+  const popupCard = currentOverlay.shadowRoot.querySelector('.popup-card');
   const popupElement = currentOverlay.shadowRoot.querySelector('.popup-state-js');
   if (popupElement) {
+    // Remove all existing state classes
+    popupCard.classList.remove('loading-state', 'error-state', 'verdict-state');
+    // Add the new state class
+    popupCard.classList.add(state);
     popupElement.innerHTML = html;
   }
 }

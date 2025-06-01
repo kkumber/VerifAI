@@ -1,0 +1,11 @@
+@import url("index.css");
+
+.popup-card .popup-invalid-state {
+  background-color: var(--color-background-error);
+  text-align: center;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-items: center;
+  align-items: center;
+}

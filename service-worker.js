@@ -77,11 +77,13 @@ async function verificationAPI(text) {
       setTimeout(() => {
         const isFactual = Math.random() > 0.5; // Random for demo
         resolve({
-          verdict: isFactual,
-          explanation: isFactual 
-            ? "This statement appears to be factually accurate based on available data." 
-            : "This statement may contain inaccurate information. Please verify with additional sources.",
-          sources: ["https://example-source1.com", "https://example-source2.com"],
+          error: 404,
+          details: 'Error encountered'
+          // verdict: isFactual,
+          // explanation: isFactual 
+          //   ? "This statement appears to be factually accurate based on available data." 
+          //   : "This statement may contain inaccurate information. Please verify with additional sources.",
+          // sources: ["https://example-source1.com", "https://example-source2.com"],
         });
       }, 1000);
     });
