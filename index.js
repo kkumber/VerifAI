@@ -29,12 +29,15 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// Rate limiting
+// Rate limiter middleware for the /api route
 const limiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 30,
-    message: { error: 'Too many requests, please try again later.' }
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please try again later.' }
 });
+// noinspection JSCheckFunctionSignatures
 app.use('/api', limiter);
 
 // Request timeout
