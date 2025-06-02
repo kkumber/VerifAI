@@ -160,6 +160,7 @@ curl -X POST http://localhost:3000/api \
 
 ---
 
+<!--suppress HtmlDeprecatedAttribute, HtmlDeprecatedAttribute -->mlDeprecatedAttribute -->
 <p align="center"><strong>netrunners</strong></p>
 
 <p align="center">
