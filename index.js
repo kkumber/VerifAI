@@ -2,33 +2,49 @@ const dotenv = require('dotenv');
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const timeout = require('connect-timeout');
 const {z} = require('zod');
+const NodeCache = require('node-cache');
 const {GoogleGenAI} = require('@google/genai');
+const compression = require('compression');
+const logger = require('./logger');
 
 dotenv.config();
 
 // Validate environment variables
 ['API_PORT', 'GEMMA_API_KEY'].forEach((key) => {
     if (!process.env[key]) {
-        console.error(`${key} is not defined in .env file`);
+        logger.error(`${key} is not defined in .env file`);
         process.exit(1);
+    }
+});
+['CONTENT_CHAR_LIMIT', 'CORS_ORIGIN'].forEach((key) => {
+    if (!process.env[key]) {
+        logger.warn(`${key} is not defined in .env file. Using default values.`);
     }
 });
 
 const app = express();
 
 // Middleware setup
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(bodyParser.json());
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+if (!process.env.CORS_ORIGIN) {
+    logger.warn('CORS_ORIGIN not set. Defaulting to "*". This may be insecure.');
+}
+app.use(
+    cors({
+        origin: process.env.CORS_ORIGIN || '*',
+        methods: ['GET', 'POST'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+    })
+);
+
+app.use(bodyParser.urlencoded({extended: true, limit: '1mb'}));
+app.use(bodyParser.json({limit: '1mb'}));
+
+logger.info('Initializing CORS middleware with origin:', {origin: process.env.CORS_ORIGIN || '*'});
+logger.info('Setting up rate limiter middleware for /api route');
+logger.info('Request timeout middleware set to 30 seconds');
 
 // Rate limiter middleware for the /api route
 const limiter = rateLimit({
@@ -36,17 +52,23 @@ const limiter = rateLimit({
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { error: 'Too many requests. Please try again later.' }
+    message: {error: 'Too many requests. Please try again later.'},
 });
+
 // noinspection JSCheckFunctionSignatures
 app.use('/api', limiter);
 
-// Request timeout
-app.use(timeout('30s'));
+// Request timeout middleware
+app.use(timeout('15s'));
 
+// Helper functions
 function enforceContentCharLimit(content) {
     const limit = parseInt(process.env.CONTENT_CHAR_LIMIT, 10) || 1000;
+    if (!process.env.CONTENT_CHAR_LIMIT) {
+        logger.warn('CONTENT_CHAR_LIMIT not set. Using default of 1000');
+    }
     if (content.length > limit) {
+        logger.error('Content exceeds character limit', {limit});
         throw new SyntaxError(`Content exceeds character limit of ${limit}.`);
     }
     return content;
@@ -54,12 +76,13 @@ function enforceContentCharLimit(content) {
 
 async function normalizeContent(content) {
     if (typeof content !== 'string') {
-        console.error("Input is not a string:", content);
+        logger.error('Input is not a string', {content});
         throw new SyntaxError('Invalid JSON format. Expected a string.');
     }
     return content
         .replace(/[^\x20-\x7E\n\r\t]/g, '')
         .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/[`"<>\\]/g, '')
         .trim();
 }
 
@@ -68,16 +91,18 @@ function removeJsonMarkdown(jsonString) {
 }
 
 const gemmaResponseSchema = z.object({
-    verdict: z.enum(["True", "False", "Partially True", "Unverifiable"]),
-    errors: z.array(z.object({
-        claim: z.string(),
-        correction: z.string(),
-        reason: z.string(),
-        source: z.string(),
-        url: z.string().url()
-    })),
+    verdict: z.enum(['True', 'False', 'Partially True', 'Unverifiable']),
+    errors: z.array(
+        z.object({
+            claim: z.string(),
+            correction: z.string(),
+            reason: z.string(),
+            source: z.string(),
+            url: z.string().url().or(z.literal('')),
+        })
+    ),
     overall_reason: z.string(),
-    related_topics: z.array(z.string())
+    related_topics: z.array(z.string()),
 });
 
 async function convertToValidJson(response) {
@@ -85,50 +110,96 @@ async function convertToValidJson(response) {
         const json = JSON.parse(response);
         return gemmaResponseSchema.parse(json);
     } catch (parseErr) {
+        logger.error('AI response is not valid or does not match schema', {error: parseErr});
         throw new SyntaxError('AI response is not valid or does not match schema.');
     }
 }
 
-async function checkErrorUrls(json) {
-    const controller = () => new AbortController();
-    const timeoutSignal = (signal, ms = 30*1000) => {
-        const t = setTimeout(() => signal.abort(), ms);
-        return () => clearTimeout(t);
-    };
+const urlCache = new NodeCache({stdTTL: 300, checkperiod: 120});
 
-    const checkedErrors = await Promise.all(json.errors.map(async err => {
-        const c = controller();
-        const clear = timeoutSignal(c.signal);
-
+async function retryFetch(url, options = {}, retries = 3, delay = 500) {
+    logger.debug('Attempting to fetch URL', {url, retries});
+    for (let i = 0; i < retries; i++) {
         try {
-            const res = await fetch(err.url, { method: 'HEAD', signal: c.signal });
-            clear();
-            return (!res.ok || res.status === 404) ? { ...err, url: '', source: '' } : err;
-        } catch {
-            clear();
-            return { ...err, url: '', source: '' };
+            const res = await fetch(url, options);
+            if (res.ok) return res;
+            logger.warn('Fetch attempt failed', {attempt: i + 1, status: res.status});
+            if ([429, 500, 502, 503].includes(res.status)) {
+                if (i === retries - 1) return res;
+                await new Promise((r) => setTimeout(r, delay * 2 ** i));
+                continue;
+            }
+            return res;
+        } catch (e) {
+            logger.error('Fetch attempt encountered an error', {
+                attempt: i + 1,
+                error: e.message
+            });
+            if (i === retries - 1) throw e;
+            await new Promise((r) => setTimeout(r, delay * 2 ** i));
         }
-    }));
+    }
+}
 
-    const had404 = checkedErrors.some(err => !err.url);
+function timeoutSignal(ms = 10000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), ms);
+    return {signal: controller.signal, cancel: () => clearTimeout(id)};
+}
 
+async function checkUrlWithEnhancements(err) {
+    if (!err.url) {
+        logger.warn('No URL provided in error object', {error: err});
+        return err;
+    }
+    if (urlCache.has(err.url)) return urlCache.get(err.url);
+
+    const {signal, cancel} = timeoutSignal();
+    try {
+        const res = await retryFetch(err.url, {method: 'HEAD', signal});
+        cancel();
+        if (!res.ok || res.status === 404) {
+            const cleaned = {...err, url: '', source: ''};
+            urlCache.set(err.url, cleaned);
+            return cleaned;
+        }
+        urlCache.set(err.url, err);
+        return err;
+    } catch (e) {
+        cancel();
+        const cleaned = {...err, url: '', source: ''};
+        urlCache.set(err.url, cleaned);
+        return cleaned;
+    }
+}
+
+async function checkErrorUrls(json) {
+    const checkedErrors = await Promise.all(
+        json.errors.map(err => checkUrlWithEnhancements(err))
+    );
+
+    const had404 = checkedErrors.some((err) => !err.url);
     if (had404) {
         checkedErrors.push({
-            claim: "Some sources or URLs could not be verified (404 or not found).",
-            correction: "Please verify the information with additional research.",
-            reason: "One or more sources/URLs returned 404 or could not be reached.",
-            source: "General Search",
-            url: `https://www.google.com/search?q=${encodeURIComponent((json.related_topics || []).join('+'))}`
+            claim: 'Some sources or URLs could not be verified (404 or not found).',
+            correction: 'Please verify the information with additional research.',
+            reason: 'One or more sources/URLs returned 404 or could not be reached.',
+            source: 'General Search',
+            url: `https://www.google.com/search?q=${encodeURIComponent(
+                (json.related_topics || []).join('+')
+            )}`,
         });
-        json.overall_reason = (json.overall_reason || '') +
-            (json.overall_reason ? " " : "") +
-            "Some sources/URLs could not be verified and were removed. Further research is recommended.";
+
+        json.overall_reason +=
+            (json.overall_reason ? ' ' : '') +
+            'Some sources/URLs could not be verified and were removed. Further research is recommended.';
     }
 
     json.errors = checkedErrors;
     return json;
 }
 
+// AI fact-check function
 async function gemma(userStatement) {
     const ai = new GoogleGenAI({apiKey: process.env.GEMMA_API_KEY});
 
@@ -183,48 +254,84 @@ async function gemma(userStatement) {
     for await (const chunk of response) {
         fullResponse += chunk.text || '';
     }
+
     return fullResponse;
 }
 
+const responseCache = new NodeCache({stdTTL: 3600}); // Cache for 1 hour
+
+app.use(compression());
+
+// API endpoint
 app.post('/api', async (req, res) => {
-    console.time("API Call Duration");
+    const startTime = process.hrtime();
+    logger.info('Received POST /api request', {payload: req.body});
+
     try {
         let content = await normalizeContent(req.body.content);
         content = enforceContentCharLimit(content);
+
+        const cacheKey = content.toLowerCase().trim();
+        const cachedResponse = responseCache.get(cacheKey);
+        if (cachedResponse) {
+            logger.info('Cache hit', {cacheKey});
+            return res.status(200).json(cachedResponse);
+        }
+
         let response = await gemma(content);
         response = removeJsonMarkdown(response);
+
         let json = await convertToValidJson(response);
         json = await checkErrorUrls(json);
 
-        console.timeEnd("API Call Duration");
+        const [seconds, nanoseconds] = process.hrtime(startTime);
+        logger.info('API call completed', {
+            duration: `${seconds}s ${nanoseconds / 1000000}ms`
+        });
+
         res.status(200).json(json);
+        responseCache.set(cacheKey, json);
     } catch (err) {
-        console.timeEnd("API Call Duration");
+        const [seconds, nanoseconds] = process.hrtime(startTime);
+        logger.error('Error processing POST /api request', {
+            error: err.message,
+            stack: err.stack,
+            duration: `${seconds}s ${nanoseconds / 1000000}ms`
+        });
+
         const status =
             err.name === 'AbortError' ? 408 :
-            err instanceof SyntaxError ? 400 :
-            err.message && err.message.includes('HTTP error') ? 500 :
-            500;
+                err instanceof SyntaxError ? 400 :
+                    err.message && err.message.includes('HTTP error') ? 500 :
+                        500;
 
         const error =
             err.name === 'AbortError' ? 'Request timed out.' :
-            err instanceof SyntaxError ? 'Invalid JSON format or validation error.' :
-            err.message && err.message.includes('HTTP error') ? 'API request failed.' :
-            'Something went wrong.';
+                err instanceof SyntaxError ? 'Invalid JSON format or validation error.' :
+                    err.message && err.message.includes('HTTP error') ? 'API request failed.' :
+                        'Something went wrong.';
 
-        console.error("Request failed:", err.message);
-        res.status(status).json({ error, code: err.name || 'ERROR', details: err.message });
+        res.status(status).json({error, code: err.name || 'ERROR', details: err.message});
     }
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+    logger.info('Health check endpoint accessed');
     res.status(200).json({status: 'OK'});
 });
 
 // 404 Not Found handler
 app.use((req, res) => {
+    logger.warn('404 Not Found', {url: req.originalUrl});
     res.status(404).json({error: 'Not Found'});
 });
 
-app.listen(process.env.API_PORT, () => console.log(`http://localhost:${process.env.API_PORT}`));
+// Start server
+app.listen(process.env.API_PORT, () => {
+    logger.info('Server started', {
+        port: process.env.API_PORT,
+        url: `http://localhost:${process.env.API_PORT}`,
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
