@@ -13,17 +13,28 @@ const logger = require('./logger');
 dotenv.config();
 
 // Validate environment variables
-['API_PORT', 'GEMMA_API_KEY'].forEach((key) => {
-    if (!process.env[key]) {
-        logger.error(`${key} is not defined in .env file`);
-        process.exit(1);
-    }
-});
-['CONTENT_CHAR_LIMIT', 'CORS_ORIGIN'].forEach((key) => {
-    if (!process.env[key]) {
-        logger.warn(`${key} is not defined in .env file. Using default values.`);
-    }
-});
+const REQUIRED_ENV_VARS = ['API_PORT', 'GEMMA_API_KEY'];
+const OPTIONAL_ENV_VARS = ['CONTENT_CHAR_LIMIT', 'CORS_ORIGIN'];
+
+function validateRequiredEnvVars() {
+    REQUIRED_ENV_VARS.forEach((key) => {
+        if (!process.env[key]) {
+            logger.error(`Missing required environment variable: ${key}`);
+            process.exit(1);
+        }
+    });
+}
+
+function checkOptionalEnvVars() {
+    OPTIONAL_ENV_VARS.forEach((key) => {
+        if (!process.env[key]) {
+            logger.warn(`Optional environment variable ${key} is not defined - falling back to default value`);
+        }
+    });
+}
+
+validateRequiredEnvVars();
+checkOptionalEnvVars();
 
 const app = express();
 
