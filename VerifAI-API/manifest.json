@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "VerifAI",
+  "version": "1.0",
+  "description": "AI fact-checking assistant",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_popup": ""
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
