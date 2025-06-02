@@ -19,6 +19,7 @@ dotenv.config();
 });
 
 const app = express();
+
 // Middleware setup
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
@@ -87,6 +88,47 @@ async function convertToValidJson(response) {
         throw new SyntaxError('AI response is not valid or does not match schema.');
     }
 }
+
+async function checkErrorUrls(json) {
+    const controller = () => new AbortController();
+    const timeoutSignal = (signal, ms = 30*1000) => {
+        const t = setTimeout(() => signal.abort(), ms);
+        return () => clearTimeout(t);
+    };
+
+    const checkedErrors = await Promise.all(json.errors.map(async err => {
+        const c = controller();
+        const clear = timeoutSignal(c.signal);
+
+        try {
+            const res = await fetch(err.url, { method: 'HEAD', signal: c.signal });
+            clear();
+            return (!res.ok || res.status === 404) ? { ...err, url: '', source: '' } : err;
+        } catch {
+            clear();
+            return { ...err, url: '', source: '' };
+        }
+    }));
+
+    const had404 = checkedErrors.some(err => !err.url);
+
+    if (had404) {
+        checkedErrors.push({
+            claim: "Some sources or URLs could not be verified (404 or not found).",
+            correction: "Please verify the information with additional research.",
+            reason: "One or more sources/URLs returned 404 or could not be reached.",
+            source: "General Search",
+            url: `https://www.google.com/search?q=${encodeURIComponent((json.related_topics || []).join('+'))}`
+        });
+        json.overall_reason = (json.overall_reason || '') +
+            (json.overall_reason ? " " : "") +
+            "Some sources/URLs could not be verified and were removed. Further research is recommended.";
+    }
+
+    json.errors = checkedErrors;
+    return json;
+}
+
 async function gemma(userStatement) {
     const ai = new GoogleGenAI({apiKey: process.env.GEMMA_API_KEY});
 
@@ -151,7 +193,8 @@ app.post('/api', async (req, res) => {
         content = enforceContentCharLimit(content);
         let response = await gemma(content);
         response = removeJsonMarkdown(response);
-        const json = await convertToValidJson(response);
+        let json = await convertToValidJson(response);
+        json = await checkErrorUrls(json);
 
         console.timeEnd("API Call Duration");
         res.status(200).json(json);
