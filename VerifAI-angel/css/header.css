@@ -1,0 +1,37 @@
+/* @import url('index.css'); */
+
+.popup-header-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-background);
+  border-bottom: 1px black solid;
+  padding: 0.5rem 1rem;
+}
+
+.popup-header-container h2 {
+  font-family: var(--font-family-header);
+}
+
+.popup-header-container .top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.popup-header-container .close-btn {
+  background: transparent;
+  border: none;
+  width: 7%;
+}
+
+.popup-header-container .close-btn:hover {
+  cursor: pointer;
+}
+
+.popup-header-container .close-btn img {
+  width: 100%;
+}
+
+.popup-header-container .highlighted-text-js {
+  font-weight: 400;
+}
