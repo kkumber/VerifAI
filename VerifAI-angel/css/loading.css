@@ -1,0 +1,23 @@
+/* @import url('index.css'); */
+
+.popup-card .popup-loading-state {
+  background-color: var(--color-background-loading);
+  text-align: center;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.loader-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.loader-img {
+  width: 48px;
+  height: 48px;
+}

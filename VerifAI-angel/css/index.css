@@ -1,0 +1,68 @@
+/* Satoshi */
+
+:root {
+  --font-family-header: 'Fira Mono', monospace;
+  --font-family-default: 'Satoshi';
+  --color-background: #f0f0f0;
+  --color-secondary-dark: #bbe6e4;
+  --color-primary: #93e2f5;
+  --color-text-default: #0b0b0b;
+  --color-primary-false: #f59395;
+  --color-background-false: #e6bbbc;
+  --color-verdict-true: #00c5f4;
+  --color-verdict-false: #f40004;
+  --color-background-links: #d9f2d8;
+  --color-background-error: #e6e1bb;
+  --color-background-loading: #f0f6f6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.popup-card {
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow: auto;
+  box-sizing: border-box;
+  border: 1px solid black;
+  font-family: var(--font-family-default);
+  border-radius: 0.8rem;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 1);
+  color: var(--color-text-default);
+  background-color: var(--color-background);
+  transition: all 0.5s ease;
+}
+
+.popup-card .loading-state {
+  background-color: var(--color-background-loading);
+}
+
+.popup-card.error-state {
+  background-color: var(--color-background-error);
+}
+
+.links-container ul {
+  padding-left: 1.25rem;
+  margin: 0;
+  list-style-position: outside; /* Fix the bullet */
+}
+
+.links-container .link-wrapper {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.links-container li {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.links-container a {
+  word-break: break-all;
+  text-decoration: underline;
+  color: blue;
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}

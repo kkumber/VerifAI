@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "VerifAI",
+  "version": "1.0",
+  "description": "AI fact-checking assistant",
+  "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "images/icon.png"
+  },
+  "icons": {
+    "16": "images/icon.png",
+    "32": "images/icon.png",
+    "48": "images/icon.png",
+    "128": "images/icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["scripts/content.js"],
+      "css": [
+        "css/index.css",
+        "css/header.css",
+        "css/verdict.css",
+        "css/error.css",
+        "css/loading.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["fonts/*", "popup/*", "css/*", "images/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:3105"
+  },
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  }
+}
